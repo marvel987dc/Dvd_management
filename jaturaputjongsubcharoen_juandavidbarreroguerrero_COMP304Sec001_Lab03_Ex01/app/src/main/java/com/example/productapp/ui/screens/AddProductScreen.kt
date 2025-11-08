@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,7 +54,6 @@ fun AddProductScreen(
         ) { DatePicker(state = datePickerState) }
     }
 
-    // Screen Content
     Scaffold(
         topBar = {
             TopAppBar(
@@ -87,7 +85,7 @@ fun AddProductScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
 
-                    // Display form-wide validation errors (if any)
+                    // Display validation errors if any
                     state.errors.forEach { error ->
                         Text(
                             text = error,
@@ -96,18 +94,6 @@ fun AddProductScreen(
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
-
-                    // Product ID (Auto)
-                    OutlinedTextField(
-                        value = state.id,
-                        onValueChange = {},
-                        label = { Text("Product ID (Auto)") },
-                        readOnly = true,
-                        enabled = false,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                    )
 
                     // Product Name
                     OutlinedTextField(
@@ -119,12 +105,24 @@ fun AddProductScreen(
                             .padding(bottom = 4.dp)
                     )
 
-                    // Price & Quantity (side by side)
+                    // Product ID (Auto) and Price side by side
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Price Input
+                        // Product ID (Auto)
+                        OutlinedTextField(
+                            value = state.id,
+                            onValueChange = {},
+                            label = { Text("Product ID (Auto)") },
+                            readOnly = true,
+                            enabled = false,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 4.dp)
+                        )
+
+                        // Price
                         OutlinedTextField(
                             value = state.price,
                             onValueChange = { viewModel.updateFormState(price = it) },
@@ -132,27 +130,28 @@ fun AddProductScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(end = 4.dp)
-                        )
-
-                        // Quantity Input
-                        OutlinedTextField(
-                            value = state.quantity,
-                            onValueChange = { newValue ->
-                                if (newValue.isEmpty() || newValue.toIntOrNull()?.let { it >= 0 } == true) {
-                                    viewModel.updateFormState(quantity = newValue)
-                                }
-                            },
-                            label = { Text("Quantity") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            isError = state.quantity.toIntOrNull()?.let { it <= 0 } == true,
-                            modifier = Modifier
-                                .weight(1f)
                                 .padding(start = 4.dp)
                         )
                     }
 
-                    // Show red text if quantity invalid
+                    Spacer(Modifier.height(12.dp))
+
+                    // Quantity field with validation
+                    OutlinedTextField(
+                        value = state.quantity,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.toIntOrNull()?.let { it >= 0 } == true) {
+                                viewModel.updateFormState(quantity = newValue)
+                            }
+                        },
+                        label = { Text("Quantity") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = state.quantity.toIntOrNull()?.let { it <= 0 } == true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                    )
+
                     if (state.quantity.toIntOrNull()?.let { it <= 0 } == true) {
                         Text(
                             text = "Quantity must be greater than 0",
@@ -160,11 +159,11 @@ fun AddProductScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
                                 .align(Alignment.Start)
-                                .padding(start = 8.dp, top = 4.dp)
+                                .padding(start = 8.dp, top = 2.dp)
                         )
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     // Date Picker Button
                     OutlinedButton(
@@ -228,9 +227,8 @@ fun AddProductScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Submit Button
+                    // Add Product Button
                     val success by viewModel.addProductSuccess.collectAsState()
-
                     Button(
                         onClick = { viewModel.validateAndAddProduct() },
                         modifier = Modifier.fillMaxWidth()
