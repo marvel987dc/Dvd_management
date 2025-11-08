@@ -41,9 +41,7 @@ fun AddProductScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val date = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
+                            val date = java.time.LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
                                 .toString()
                             viewModel.updateFormState(deliveryDate = date)
                         }
