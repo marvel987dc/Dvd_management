@@ -1,3 +1,38 @@
-# Default ignored files
-/shelf/
-/workspace.xml
+# Android/IntelliJ project files to ignore
+.idea/
+.gradle/
+local.properties
+*.iml
+.DS_Store
+
+# Build folders
+**/build/
+**/captures/
+
+# Android-specific
+*.apk
+*.ap_ 
+*.dex
+*.class
+*.jar
+*.war
+*.ear
+*.so
+*.out
+
+# Log and temporary files
+*.log
+*.temp
+*.tmp
+
+# Kotlin and Java generated files
+bin/
+gen/
+out/
+
+# VS Code
+.vscode/
+
+# Jetpack Compose previews and cache
+.navigation/
+.cache/
