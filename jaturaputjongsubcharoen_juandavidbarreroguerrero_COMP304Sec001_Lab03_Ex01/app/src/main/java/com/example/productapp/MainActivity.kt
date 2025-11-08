@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ProductAppTheme {
-                // Get window size class for responsive layouts
+                // Get window size class for responsive layouts //Try
                 val windowSizeClass = calculateWindowSizeClass(this)
                 // Create navigation controller
                 val navController = rememberNavController()
