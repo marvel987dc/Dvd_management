@@ -27,6 +27,7 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         val id: String = "",
         val name: String = "",
         val price: String = "",
+        val quantity: String = "",
         val deliveryDate: String = "",
         val category: String = "",
         val isFavorite: Boolean = false,
@@ -41,19 +42,41 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         repository = ProductRepository(dao)
         allProducts = repository.products.asLiveData()
         favoriteProducts = repository.favoriteProducts.asLiveData()
+
+        // Observe products list and update next ID when loaded
+        allProducts.observeForever { productList ->
+            if (productList.isNotEmpty()) {
+                val nextId = (productList.mapNotNull { it.productId.toIntOrNull() }.maxOrNull() ?: 100) + 1
+                _addProductState.update { it.copy(id = nextId.toString()) }
+            } else {
+                // If empty list, start from 101
+                _addProductState.update { it.copy(id = "101") }
+            }
+        }
+    }
+
+    // Generate the next product ID based on the current max value
+    private fun generateNextProductId(): String {
+        val currentList = allProducts.value ?: emptyList()
+        val maxId = currentList.mapNotNull { it.productId.toIntOrNull() }.maxOrNull() ?: 100
+        return (maxId + 1).toString()
     }
 
     fun validateAndAddProduct() {
         val state = _addProductState.value
         val errors = mutableListOf<String>()
 
-        // ID validation (3 digits, 101-999)
+        // ID validation (auto-generated, but still checked)
         val id = state.id.toIntOrNull()
         if (id == null || id !in 101..999) errors.add("Invalid ID (101-999)")
 
         // Price validation
         val price = state.price.toDoubleOrNull()
         if (price == null || price <= 0) errors.add("Price must be positive")
+
+        // Quantity validation (must be > 0)
+        val quantity = state.quantity.toIntOrNull()
+        if (quantity == null || quantity <= 0) errors.add("Quantity must be greater than 0")
 
         // Date validation
         val currentDate = LocalDate.now()
@@ -74,43 +97,57 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         if (errors.isEmpty()) {
             insert(
                 Product(
-                    id = 0,  // Room will auto-generate this
-                    productId = state.id,  // use entered ID as productId
+                    id = 0,
+                    productId = state.id,
                     name = state.name,
                     price = price!!,
-                    quantity = 1, // temporary default until you add quantity field
+                    quantity = quantity!!,
                     category = state.category,
                     isFavorite = state.isFavorite,
                     deliveryDate = state.deliveryDate
                 )
             )
-            _addProductState.update { it.copy(errors = emptyList()) }
-            _addProductSuccess.value = true  // Set success to true
+
+            // Clear errors and mark success
+            _addProductState.update {
+                it.copy(
+                    errors = emptyList(),
+                    id = generateNextProductId(), // prepare next product ID
+                    name = "",
+                    price = "",
+                    quantity = "",
+                    category = "",
+                    deliveryDate = "",
+                    isFavorite = false
+                )
+            }
+
+            _addProductSuccess.value = true
         } else {
             _addProductState.update { it.copy(errors = errors) }
-            _addProductSuccess.value = false  // Reset success on validation failure
+            _addProductSuccess.value = false
         }
     }
 
     // Update form fields
     fun updateFormState(
-        id: String? = null,
-        name: String? = null,
-        price: String? = null,
-        deliveryDate: String? = null,
-        category: String? = null,
-        isFavorite: Boolean? = null
+        id: String = _addProductState.value.id,
+        name: String = _addProductState.value.name,
+        price: String = _addProductState.value.price,
+        category: String = _addProductState.value.category,
+        isFavorite: Boolean = _addProductState.value.isFavorite,
+        deliveryDate: String = _addProductState.value.deliveryDate,
+        quantity: String = _addProductState.value.quantity
     ) {
-        _addProductState.update { current ->
-            current.copy(
-                id = id ?: current.id,
-                name = name ?: current.name,
-                price = price ?: current.price,
-                deliveryDate = deliveryDate ?: current.deliveryDate,
-                category = category ?: current.category,
-                isFavorite = isFavorite ?: current.isFavorite
-            )
-        }
+        _addProductState.value = _addProductState.value.copy(
+            id = id,
+            name = name,
+            price = price,
+            category = category,
+            isFavorite = isFavorite,
+            deliveryDate = deliveryDate,
+            quantity = quantity
+        )
     }
 
     fun toggleFavorite(product: Product) {

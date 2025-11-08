@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.productapp.data.Product
 
@@ -32,12 +33,29 @@ fun ProductItem(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Product info column without clickable modifier
             Column(modifier = Modifier.weight(1f)) {
-                Text("ID: ${product.productId}", style = MaterialTheme.typography.bodySmall)
-                Text(product.name, style = MaterialTheme.typography.titleMedium)
+
+                // Product name
+                Text(product.name, style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                    )
+                )
+
+                // ID
+                Text(
+                    text = "ID: ${product.productId}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                // Price
                 Text("$${product.price}", style = MaterialTheme.typography.bodyMedium)
+
+                // Quantity
                 Text("Qty: ${product.quantity}", style = MaterialTheme.typography.bodySmall)
+
+                // Category
                 Text(product.category, style = MaterialTheme.typography.bodySmall)
             }
 
@@ -63,14 +81,14 @@ fun ProductItem(
                     },
                     modifier = Modifier.testTag("edit_button")
                 ) {
-                    Icon(Icons.Default.Edit, "Edit")
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
                 }
 
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.testTag("delete_button")
                 ) {
-                    Icon(Icons.Default.Delete, "Delete")
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
                 }
             }
         }

@@ -1,46 +1,13 @@
 package com.example.productapp.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -88,7 +55,7 @@ fun AddProductScreen(
         ) { DatePicker(state = datePickerState) }
     }
 
-    // Screen Content with TopAppBar
+    // Screen Content
     Scaffold(
         topBar = {
             TopAppBar(
@@ -119,7 +86,8 @@ fun AddProductScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Display errors
+
+                    // Display form-wide validation errors (if any)
                     state.errors.forEach { error ->
                         Text(
                             text = error,
@@ -129,7 +97,19 @@ fun AddProductScreen(
                         )
                     }
 
-                    // Name Field (New)
+                    // Product ID (Auto)
+                    OutlinedTextField(
+                        value = state.id,
+                        onValueChange = {},
+                        label = { Text("Product ID (Auto)") },
+                        readOnly = true,
+                        enabled = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                    )
+
+                    // Product Name
                     OutlinedTextField(
                         value = state.name,
                         onValueChange = { viewModel.updateFormState(name = it) },
@@ -139,21 +119,12 @@ fun AddProductScreen(
                             .padding(bottom = 4.dp)
                     )
 
-                    // ID & Price
+                    // Price & Quantity (side by side)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        OutlinedTextField(
-                            value = state.id,
-                            onValueChange = { viewModel.updateFormState(id = it) },
-                            label = { Text("Product ID") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 4.dp)
-                        )
-
+                        // Price Input
                         OutlinedTextField(
                             value = state.price,
                             onValueChange = { viewModel.updateFormState(price = it) },
@@ -161,13 +132,41 @@ fun AddProductScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier
                                 .weight(1f)
+                                .padding(end = 4.dp)
+                        )
+
+                        // Quantity Input
+                        OutlinedTextField(
+                            value = state.quantity,
+                            onValueChange = { newValue ->
+                                if (newValue.isEmpty() || newValue.toIntOrNull()?.let { it >= 0 } == true) {
+                                    viewModel.updateFormState(quantity = newValue)
+                                }
+                            },
+                            label = { Text("Quantity") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = state.quantity.toIntOrNull()?.let { it <= 0 } == true,
+                            modifier = Modifier
+                                .weight(1f)
                                 .padding(start = 4.dp)
+                        )
+                    }
+
+                    // Show red text if quantity invalid
+                    if (state.quantity.toIntOrNull()?.let { it <= 0 } == true) {
+                        Text(
+                            text = "Quantity must be greater than 0",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .align(Alignment.Start)
+                                .padding(start = 8.dp, top = 4.dp)
                         )
                     }
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Date Picker
+                    // Date Picker Button
                     OutlinedButton(
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth()
@@ -189,9 +188,7 @@ fun AddProductScreen(
                             readOnly = true,
                             label = { Text("Category") },
                             trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(
-                                    expanded = expanded
-                                )
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
                             modifier = Modifier
                                 .menuAnchor()
@@ -241,11 +238,11 @@ fun AddProductScreen(
                         Text("Add Product")
                     }
 
-                    // Observe success and navigate
+                    // Navigate after success
                     LaunchedEffect(success) {
                         if (success) {
                             navController.navigate("home") {
-                                popUpTo("add") { inclusive = true } // Corrected route name
+                                popUpTo("add") { inclusive = true }
                             }
                             viewModel.resetSuccessState()
                         }
