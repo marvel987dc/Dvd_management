@@ -37,14 +37,17 @@ fun EditMovieScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var genreExpanded by remember { mutableStateOf(false) }
 
-    // Realtime validation states
+    // Validation states
+    var titleError by rememberSaveable { mutableStateOf<String?>(null) }
     var directorError by rememberSaveable { mutableStateOf<String?>(null) }
     var priceError by rememberSaveable { mutableStateOf<String?>(null) }
     var durationError by rememberSaveable { mutableStateOf<String?>(null) }
+    var dateError by rememberSaveable { mutableStateOf<String?>(null) }
+    var genreError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val genres = listOf("Family", "Comedy", "Thriller", "Action", "Drama", "Sci-Fi")
 
-    // Navigate back when save successful
+    // Navigate back after successful save
     if (updateSuccess) {
         LaunchedEffect(Unit) {
             viewModel.resetUpdateSuccess()
@@ -52,7 +55,7 @@ fun EditMovieScreen(
         }
     }
 
-    // Date picker for release date
+    // Date picker
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
         DatePickerDialog(
@@ -65,6 +68,7 @@ fun EditMovieScreen(
                             .toLocalDate()
                             .toString()
                         viewModel.updateFormState(releaseDate = date)
+                        dateError = null
                     }
                     showDatePicker = false
                 }) { Text("OK") }
@@ -108,14 +112,26 @@ fun EditMovieScreen(
             // Title
             OutlinedTextField(
                 value = state.title,
-                onValueChange = { viewModel.updateFormState(title = it) },
+                onValueChange = {
+                    viewModel.updateFormState(title = it)
+                    titleError = null
+                },
                 label = { Text("Title") },
+                isError = titleError != null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = 4.dp)
             )
+            if (titleError != null) {
+                Text(
+                    text = titleError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                )
+            }
 
-            // Director (live validation)
+            // Director
             OutlinedTextField(
                 value = state.director,
                 onValueChange = {
@@ -142,7 +158,7 @@ fun EditMovieScreen(
                 )
             }
 
-            // Price (live validation)
+            // Price
             OutlinedTextField(
                 value = state.price,
                 onValueChange = {
@@ -171,7 +187,7 @@ fun EditMovieScreen(
                 )
             }
 
-            // Duration (live validation)
+            // Duration
             OutlinedTextField(
                 value = state.durationMinutes,
                 onValueChange = {
@@ -200,16 +216,25 @@ fun EditMovieScreen(
                 )
             }
 
-            // Release date selector
+            // Release Date
             OutlinedButton(
                 onClick = { showDatePicker = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (dateError != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
+                )
             ) {
                 Text(
                     if (state.releaseDate.isBlank()) "Select Release Date"
                     else state.releaseDate
+                )
+            }
+            if (dateError != null) {
+                Text(
+                    text = dateError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
                 )
             }
 
@@ -217,9 +242,7 @@ fun EditMovieScreen(
             ExposedDropdownMenuBox(
                 expanded = genreExpanded,
                 onExpandedChange = { genreExpanded = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = state.genre,
@@ -229,6 +252,7 @@ fun EditMovieScreen(
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = genreExpanded)
                     },
+                    isError = genreError != null,
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
@@ -243,11 +267,20 @@ fun EditMovieScreen(
                             text = { Text(genre) },
                             onClick = {
                                 viewModel.updateFormState(genre = genre)
+                                genreError = null
                                 genreExpanded = false
                             }
                         )
                     }
                 }
+            }
+            if (genreError != null) {
+                Text(
+                    text = genreError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                )
             }
 
             // Favorite switch
@@ -265,11 +298,54 @@ fun EditMovieScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Save button (disabled if any errors)
+            // Save Changes button
             Button(
-                onClick = { viewModel.validateAndUpdateMovie(movieId) },
+                onClick = {
+                    var hasError = false
+
+                    // Validate all fields
+                    if (state.title.isBlank()) {
+                        titleError = "Title is required."
+                        hasError = true
+                    } else titleError = null
+
+                    if (state.director.isBlank() || !Regex("^[A-Za-z ]+$").matches(state.director)) {
+                        directorError = if (state.director.isBlank()) "Director is required."
+                        else "Director name must contain only letters."
+                        hasError = true
+                    } else directorError = null
+
+                    val priceVal = state.price.toDoubleOrNull()
+                    if (state.price.isBlank() || priceVal == null || priceVal <= 0) {
+                        priceError = if (state.price.isBlank()) "Price is required."
+                        else "Price must be a positive number."
+                        hasError = true
+                    } else priceError = null
+
+                    val durationVal = state.durationMinutes.toIntOrNull()
+                    if (state.durationMinutes.isBlank() || durationVal == null || durationVal <= 0) {
+                        durationError = if (state.durationMinutes.isBlank()) "Duration is required."
+                        else "Duration must be greater than 0."
+                        hasError = true
+                    } else durationError = null
+
+                    if (state.releaseDate.isBlank()) {
+                        dateError = "Please select a release date."
+                        hasError = true
+                    } else dateError = null
+
+                    if (state.genre.isBlank()) {
+                        genreError = "Please choose a genre."
+                        hasError = true
+                    } else genreError = null
+
+                    // Only update if no errors
+                    if (!hasError) {
+                        viewModel.validateAndUpdateMovie(movieId)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = directorError == null && priceError == null && durationError == null
+                enabled = true
             ) {
                 Text("Save Changes")
             }
