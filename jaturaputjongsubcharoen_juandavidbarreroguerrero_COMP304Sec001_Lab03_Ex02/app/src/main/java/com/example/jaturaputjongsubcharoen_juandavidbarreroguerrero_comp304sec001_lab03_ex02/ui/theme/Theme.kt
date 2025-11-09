@@ -36,7 +36,6 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun Jaturaputjongsubcharoen_juandavidbarreroguerrero_COMP304Sec001_Lab03_Ex02Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
