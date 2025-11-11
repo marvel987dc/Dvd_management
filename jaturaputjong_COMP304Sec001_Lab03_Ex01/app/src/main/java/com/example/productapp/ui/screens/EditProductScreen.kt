@@ -17,7 +17,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.productapp.ui.viewmodel.ProductViewModel
 
-// Screen for editing an existing product
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProductScreen(
@@ -26,7 +25,6 @@ fun EditProductScreen(
     viewModel: ProductViewModel = viewModel()
 ) {
     val products by viewModel.allProducts.observeAsState(emptyList())
-    println("EditProductScreen: productId=$productId, products=$products") // Log for debugging
 
     if (productId == null) {
         LaunchedEffect(Unit) { navController.popBackStack() }
@@ -36,33 +34,73 @@ fun EditProductScreen(
     val product = products.find { it.id == productId }
     if (product == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator() // Show loading while waiting for product
+            CircularProgressIndicator()
         }
         return
     }
 
+    // Field states
     var editedName by remember { mutableStateOf(product.name) }
     var editedPrice by remember { mutableStateOf(product.price.toString()) }
     var editedCategory by remember { mutableStateOf(product.category) }
     var editedFavorite by remember { mutableStateOf(product.isFavorite) }
-    var expanded by remember { mutableStateOf(false) } // State for dropdown expansion
+
+    // Dropdown state
+    var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Electronics", "Appliances", "Cell Phone", "Media")
 
+    // Validation error states
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var priceError by remember { mutableStateOf<String?>(null) }
+    var categoryError by remember { mutableStateOf<String?>(null) }
+
     Column(modifier = Modifier.padding(16.dp)) {
+
+        // Product Name
         OutlinedTextField(
             value = editedName,
-            onValueChange = { editedName = it },
+            onValueChange = {
+                editedName = it
+                nameError = if (it.isBlank()) "Product name is required." else null
+            },
             label = { Text("Product Name") },
+            isError = nameError != null,
             modifier = Modifier.fillMaxWidth()
         )
+        nameError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
+        }
 
+        // Price
         OutlinedTextField(
             value = editedPrice,
-            onValueChange = { editedPrice = it },
+            onValueChange = {
+                editedPrice = it
+                val priceVal = it.toDoubleOrNull()
+                priceError = when {
+                    it.isBlank() -> "Price is required."
+                    priceVal == null || priceVal <= 0 -> "Price must be a positive number."
+                    else -> null
+                }
+            },
             label = { Text("Price") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            isError = priceError != null,
             modifier = Modifier.fillMaxWidth()
         )
+        priceError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
+        }
 
         // Category Dropdown
         ExposedDropdownMenuBox(
@@ -81,6 +119,7 @@ fun EditProductScreen(
                         contentDescription = "Category Dropdown"
                     )
                 },
+                isError = categoryError != null,
                 modifier = Modifier
                     .menuAnchor()
                     .fillMaxWidth()
@@ -95,26 +134,44 @@ fun EditProductScreen(
                         text = { Text(category) },
                         onClick = {
                             editedCategory = category
+                            categoryError = null
                             expanded = false
                         }
                     )
                 }
             }
         }
+        if (editedCategory.isBlank()) {
+            categoryError = "Category is required."
+        }
+        categoryError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
+        }
 
+        // Favorite switch
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 16.dp)
         ) {
             Text("Favorite:")
             Spacer(modifier = Modifier.width(8.dp))
-            Switch(checked = editedFavorite, onCheckedChange = { editedFavorite = it })
+            Switch(
+                checked = editedFavorite,
+                onCheckedChange = { editedFavorite = it }
+            )
         }
 
+        // Buttons Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Delete
             Button(
                 onClick = {
                     viewModel.delete(product)
@@ -127,16 +184,40 @@ fun EditProductScreen(
                 Text("Delete")
             }
 
-            Button(onClick = {
-                val updatedProduct = product.copy(
-                    name = editedName,
-                    price = editedPrice.toDoubleOrNull() ?: 0.0,
-                    category = editedCategory,
-                    isFavorite = editedFavorite
-                )
-                viewModel.update(updatedProduct)
-                navController.popBackStack()
-            }) {
+            // Save
+            Button(
+                onClick = {
+                    var hasError = false
+
+                    if (editedName.isBlank()) {
+                        nameError = "Product name is required."
+                        hasError = true
+                    }
+
+                    val priceVal = editedPrice.toDoubleOrNull()
+                    if (editedPrice.isBlank() || priceVal == null || priceVal <= 0) {
+                        priceError = "Price must be a positive number."
+                        hasError = true
+                    }
+
+                    if (editedCategory.isBlank()) {
+                        categoryError = "Category is required."
+                        hasError = true
+                    }
+
+                    // Proceed only if all inputs are valid
+                    if (!hasError) {
+                        val updatedProduct = product.copy(
+                            name = editedName.trim(),
+                            price = priceVal ?: 0.0,
+                            category = editedCategory,
+                            isFavorite = editedFavorite
+                        )
+                        viewModel.update(updatedProduct)
+                        navController.popBackStack()
+                    }
+                }
+            ) {
                 Icon(Icons.Default.Edit, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Save")
